@@ -10,7 +10,7 @@
     />
     <!-- This script tag is for jQuery Library -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <!-- This script tag is for Latest compiled Javascript> -->
+    <!-- This script tag is for Latest compiled Javascript -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <title>Student Form using JPDB</title>
   </head>
@@ -22,7 +22,6 @@
       <form id="empform" method="get">
         <div class="form-group">
           <label for="rollno">Roll No: </label>
-
           <input
             type="number"
             id="rollno"
@@ -93,5 +92,222 @@
       src="http://login2explore.com/jpdb/resources/js/0.0.3/jpdb-commons.js"
     ></script>
     <script src="/index.js"></script>
+    <script>
+      const jpdbBaseURL = 'http://api.login2explore.com:5577';
+      const jpdbIRL = '/api/irl';
+      const jpdbIML = '/api/iml';
+      const empDBName = 'SCHOOL-DB';
+      const empRelationName = 'STUDENT-TABLE';
+      const connToken = '90934381|-31949228558939352|90957148';
+
+      // Function to save record number in localStorage
+      const saveRecNo2LS = (jsonObj) => {
+        const lvData = JSON.parse(jsonObj.data);
+        localStorage.setItem('recno', lvData.rec_no);
+      };
+
+      // Function to create Roll No JSON object
+      const getRollNoAsJsonObj = () => {
+        const rollno = $('#rollno').val();
+        return JSON.stringify({ id: rollno });
+      };
+
+      // Function to fill data in form fields
+      const fillData = (jsonObj) => {
+        saveRecNo2LS(jsonObj);
+        const record = JSON.parse(jsonObj.data).record;
+        $('#studentName').val(record.name);
+        $('#studentClass').val(record.class);
+        $('#birthDate').val(record.birthDate);
+        $('#address').val(record.address);
+        $('#enrollmentDate').val(record.enrollmentDate);
+      };
+
+      // Function to reset form
+      const resetForm = () => {
+        $(
+          '#rollno, #studentName, #studentClass, #birthDate, #address, #enrollmentDate'
+        ).val('');
+        $('#rollno').prop('disabled', false);
+        $('#save, #change, #reset').prop('disabled', true);
+        $('#rollno').focus();
+      };
+
+      // Function to validate form data
+      const validateData = () => {
+        const rollno = $('#rollno').val();
+        const studentName = $('#studentName').val();
+        const studentClass = $('#studentClass').val();
+        const birthDate = $('#birthDate').val();
+        const address = $('#address').val();
+        const enrollmentDate = $('#enrollmentDate').val();
+
+        if (!rollno) {
+          alert('Roll No. is missing');
+          $('#rollno').focus();
+          return '';
+        }
+
+        if (!studentName) {
+          alert('Student name is missing');
+          $('#studentName').focus();
+          return '';
+        }
+
+        if (!studentClass) {
+          alert('Student class is missing');
+          $('#studentClass').focus();
+          return '';
+        }
+
+        if (!birthDate) {
+          alert('Date of birth is missing');
+          $('#birthDate').focus();
+          return '';
+        }
+
+        if (!address) {
+          alert('Address is missing');
+          $('#address').focus();
+          return '';
+        }
+
+        if (!enrollmentDate) {
+          alert('Date of enrollment is missing');
+          $('#enrollmentDate').focus();
+          return '';
+        }
+
+        const jsonStrObj = {
+          id: rollno,
+          name: studentName,
+          class: studentClass,
+          birthDate,
+          address,
+          enrollmentDate,
+        };
+
+        return JSON.stringify(jsonStrObj);
+      };
+
+      // Function to get student data
+      const getStudent = () => {
+        const rollJsonObj = getRollNoAsJsonObj();
+        const getRequest = createGET_BY_KEYRequest(
+          connToken,
+          empDBName,
+          empRelationName,
+          rollJsonObj
+        );
+        jQuery.ajaxSetup({ async: false });
+        const resJsonObj = executeCommandAtGivenBaseUrl(
+          getRequest,
+          jpdbBaseURL,
+          jpdbIRL
+        );
+        console.log(resJsonObj);
+        jQuery.ajaxSetup({ async: true });
+
+        if (resJsonObj.status === 400) {
+          $('#save, #reset').prop('disabled', false);
+          $('#studentName').focus();
+        } else if (resJsonObj.status === 200) {
+          $('#rollno').prop('disabled', true);
+          fillData(resJsonObj);
+          $('#change, #reset').prop('disabled', false);
+          $('#studentName').focus();
+        }
+      };
+
+      // Function to save data
+      const saveData = () => {
+        const jsonStrObj = validateData();
+        if (!jsonStrObj) return '';
+
+        const putRequest = createPUTRequest(
+          connToken,
+          jsonStrObj,
+          empDBName,
+          empRelationName
+        );
+        jQuery.ajaxSetup({ async: false });
+        const resJsonObj = executeCommandAtGivenBaseUrl(
+          putRequest,
+          jpdbBaseURL,
+          jpdbIML
+        );
+        jQuery.ajaxSetup({ async: true });
+
+        $('#studentClass').val('');
+        resetForm();
+        $('#rollno').focus();
+      };
+
+      // Function to change data
+      const changeData = () => {
+        $('#change').prop('disabled', true);
+        const jsonChg = validateData();
+        const updateRequest = createUPDATERecordRequest(
+          connToken,
+          jsonChg,
+          empDBName,
+          empRelationName,
+          localStorage.getItem('recno')
+        );
+        jQuery.ajaxSetup({ async: false });
+        const resJsonObj = executeCommandAtGivenBaseUrl(
+          updateRequest,
+          jpdbBaseURL,
+          jpdbIML
+        );
+        jQuery.ajaxSetup({ async: true });
+        console.log(resJsonObj);
+        resetForm();
+        $('#rollno').focus();
+      };
+
+      // Function to enable buttons if all fields are filled and reset button if any field is filled
+      const enableButtonsIfValid = () => {
+        const rollno = $('#rollno').val();
+        const studentName = $('#studentName').val();
+        const studentClass = $('#studentClass').val();
+        const birthDate = $('#birthDate').val();
+        const address = $('#address').val();
+        const enrollmentDate = $('#enrollmentDate').val();
+
+        // Enable Reset button as soon as any field is filled
+        if (
+          rollno ||
+          studentName ||
+          studentClass ||
+          birthDate ||
+          address ||
+          enrollmentDate
+        ) {
+          $('#reset').prop('disabled', false);
+        } else {
+          $('#reset').prop('disabled', true);
+        }
+
+        // Enable Save and Change buttons only if all fields are filled
+        if (
+          rollno &&
+          studentName &&
+          studentClass &&
+          birthDate &&
+          address &&
+          enrollmentDate
+        ) {
+          $('#save, #change').prop('disabled', false);
+        } else {
+          $('#save, #change').prop('disabled', true);
+        }
+      };
+
+      // Event listener to check data validity on any input change
+      $(
+        '#rollno, #studentName, #studentClass, #birthDate, #address, #enrollmentDate'
+      ).on('input', enableButtonsIfValid);
+    </script>
   </body>
 </html>
