@@ -1,5 +1,3 @@
-console.log("This is my Login2Xplore assignment");
-
 const jpdbBaseURL = "http://api.login2explore.com:5577";
 const jpdbIRL = "/api/irl";
 const jpdbIML = "/api/iml";
